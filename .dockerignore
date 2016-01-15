@@ -1,0 +1,5 @@
+node_modules/
+.git/
+.idea/
+config.json
+pool_configs/
