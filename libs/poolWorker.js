@@ -146,7 +146,13 @@ module.exports = function(logger){
                     else {
                         pool.daemon.cmd('validateaddress', [workerName], function (results) {
                             var isValid = results.filter(function (r) {
-                                return r.response.isvalid
+                                if (!r.response) {
+                                    var message = "Invalid daemon response: " + JSON.stringify(r)
+                                    logger.error(logSystem, logComponent, logSubCat, message);
+                                    return false;
+                                } else {
+                                    return r.response.isvalid;
+                                }
                             }).length > 0;
                             authCallback(isValid);
                         });
