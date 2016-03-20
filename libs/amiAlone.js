@@ -14,8 +14,20 @@ module.exports = function(logger, portalConfig, poolConfigs){
         return cookie;
     }
 
+    var ensureCORS = function(req, res) {
+        var origin = req.get('origin');
+        if (origin) {
+            res.set({
+                'Access-Control-Allow-Origin': origin,
+                'Access-Control-Allow-Credentials': true
+            });
+        }
+    }
+
     this.handleRequest = function(req, res, next){
+        ensureCORS(req, res);
         var cookie = ensureWorkerIdCookie(req, res);
+
         res.end("Your cookie is " + cookie);
     };
 };
