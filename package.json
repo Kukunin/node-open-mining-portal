@@ -38,6 +38,7 @@
         "mysql": "*",
         "async": "*",
         "express": "*",
+        "cookie-parser": "*",
         "body-parser": "*",
         "compression": "*",
         "dot": "*",
