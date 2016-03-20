@@ -2,6 +2,7 @@ var redis = require('redis');
 var async = require('async');
 
 var stats = require('./stats.js');
+var amiAlone = require('./amiAlone.js');
 
 module.exports = function(logger, portalConfig, poolConfigs){
 
@@ -9,6 +10,7 @@ module.exports = function(logger, portalConfig, poolConfigs){
     var _this = this;
 
     var portalStats = this.stats = new stats(logger, portalConfig, poolConfigs);
+    var amiAloneHandler = new amiAlone(logger, portalConfig, poolConfigs);
 
     this.liveStatConnections = {};
 
@@ -34,6 +36,11 @@ module.exports = function(logger, portalConfig, poolConfigs){
                 });
 
                 return;
+            case 'ami_alone':
+                if (portalConfig.website.amiAlone.enabled) {
+                    amiAloneHandler.handleRequest(req, res, next);
+                    return;
+                }
             default:
                 next();
         }
