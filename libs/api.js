@@ -3,6 +3,7 @@ var async = require('async');
 var express = require('express');
 var stats = require('./stats.js');
 var compress = require('compression');
+var amiAlone = require('./amiAlone.js');
 
 module.exports = function(logger, portalConfig, poolConfigs){
 
@@ -11,6 +12,7 @@ module.exports = function(logger, portalConfig, poolConfigs){
     var _this = this;
 
     var portalStats = this.stats = new stats(logger, portalConfig, poolConfigs);
+    var amiAloneHandler = new amiAlone(logger, portalConfig, poolConfigs);
 
     this.liveStatConnections = {};
 
@@ -63,6 +65,11 @@ module.exports = function(logger, portalConfig, poolConfigs){
                 });
 
                 return;
+            case 'ami_alone':
+                if (portalConfig.website.amiAlone.enabled) {
+                    amiAloneHandler.handleRequest(req, res, next);
+                    return;
+                }
             default:
                 next();
         }

@@ -8,6 +8,7 @@ var redis = require('redis');
 var dot = require('dot');
 var express = require('express');
 var bodyParser = require('body-parser');
+var cookieParser = require('cookie-parser');
 var compress = require('compression');
 
 var Stratum = require('merged-pooler');
@@ -306,6 +307,9 @@ module.exports = function(logger){
      app.get('/miner/:address', minerpage);
      app.get('/payout/:address', payout);
 
+    if (portalConfig.website.amiAlone.enabled) {
+        app.use(cookieParser());
+    }
     app.use(bodyParser.json());
 
     app.get('/get_page', function(req, res, next){

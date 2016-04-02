@@ -47,6 +47,10 @@
         "adminCenter": {
             "enabled": true,
             "password": "password"
+        },
+        "amiAlone": {
+            "enabled": true,
+            "expiration": 60
         }
     },
 
