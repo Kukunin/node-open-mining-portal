@@ -1,6 +1,6 @@
 {
-    "name": "node-open-mining-portal",
-    "version": "0.0.4",
+    "name": "unified-node-open-mining-portal",
+    "version": "1.0.0",
     "description": "An extremely efficient, highly scalable, all-in-one, easy to setup cryptocurrency mining pool",
     "keywords": [
         "stratum",
@@ -10,17 +10,25 @@
         "poolserver",
         "bitcoin",
         "litecoin",
-        "scrypt"
+        "scrypt",
+	"merged",
+	"multipool",
+	"multicoin"
     ],
-    "homepage": "https://github.com/zone117x/node-open-mining-portal",
+    "homepage": "https://github.com/UNOMP/unified-node-open-mining-portal",
     "bugs": {
-        "url": "https://github.com/zone117x/node-open-mining-portal/issues"
+        "url": "https://github.com/UNOMP/unified-node-open-mining-portal/issues"
     },
     "license": "GPL-2.0",
-    "author": "Matthew Little",
     "contributors": [
         "vekexasia",
-        "TheSeven"
+        "TheSeven",
+        "ahmed",
+	"zone117x",
+	"elitemobb",
+	"altnuts",
+	"infernoman",
+	"sigwo"
     ],
     "main": "init.js",
     "bin": {
@@ -28,11 +36,13 @@
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/zone117x/node-open-mining-portal.git"
+        "url": "https://github.com/UNOMP/unified-node-open-mining-portal.git"
     },
     "dependencies": {
-        "stratum-pool": "git://github.com/Kukunin/node-stratum-pool.git",
+        "merged-pooler": "git://github.com/Kukunin/node-stratum-pool.git",
         "dateformat": "*",
+	"log4js": "*",
+	"bitcoin": "*",
         "node-json-minify": "*",
         "redis": "*",
         "mysql": "*",
@@ -41,9 +51,15 @@
         "body-parser": "*",
         "compression": "*",
         "dot": "*",
+        "newrelic": "*",
         "colors": "*",
         "node-watch": "*",
         "request": "*",
+        "node-schedule": "*",
+        "node-poloniex": "git://github.com/sigwo/poloniex.js",
+        "node-bittrex": "git://github.com/n0mad01/node.bittrex.api",
+        "node-cryptsy": "git://github.com/sigwo/node-cryptsy",
+        "node-cryptopia": "git://github.com/sigwo/node-cryptopia",
         "nonce": "*",
         "bignum": "*",
         "extend": "*"

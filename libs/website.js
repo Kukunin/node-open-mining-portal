@@ -5,14 +5,13 @@ var path = require('path');
 var async = require('async');
 var watch = require('node-watch');
 var redis = require('redis');
-
 var dot = require('dot');
 var express = require('express');
 var bodyParser = require('body-parser');
 var compress = require('compression');
 
-var Stratum = require('stratum-pool');
-var util = require('stratum-pool/lib/util.js');
+var Stratum = require('merged-pooler');
+var util = require('merged-pooler/lib/util.js');
 
 var api = require('./api.js');
 
@@ -26,18 +25,22 @@ module.exports = function(logger){
 
     var websiteConfig = portalConfig.website;
 
-    var portalApi = new api(logger, portalConfig, poolConfigs);
-    var portalStats = portalApi.stats;
+    var portalApi;
+    var portalStats;
+
+    var startPortalApi = function() {
+        portalApi = new api(logger, portalConfig, poolConfigs);
+        portalStats = portalApi.stats;
+    }
+    startPortalApi();
 
     var logSystem = 'Website';
-
 
     var pageFiles = {
         'index.html': 'index',
         'home.html': '',
         'getting_started.html': 'getting_started',
         'stats.html': 'stats',
-        'tbs.html': 'tbs',
         'workers.html': 'workers',
         'api.html': 'api',
         'admin.html': 'admin',
@@ -50,8 +53,22 @@ module.exports = function(logger){
     var indexesProcessed = {};
 
     var keyScriptTemplate = '';
-    var keyScriptProcessed = '';
+    var keyScriptProcessed = ''; 
 
+    process.on('message', function(message) {
+        switch(message.type){
+            case 'reloadpool':
+                if (message.coin) {
+                    var messageCoin = message.coin.toLowerCase();
+                    var poolTarget = Object.keys(poolConfigs).filter(function(p){
+                        return p.toLowerCase() === messageCoin;
+                    })[0];
+                    poolConfigs  = JSON.parse(message.pools);
+                    startPortalApi();
+                }
+                break;
+        }
+    });
 
     var processTemplates = function(){
 
@@ -73,8 +90,6 @@ module.exports = function(logger){
 
         //logger.debug(logSystem, 'Stats', 'Website updated to latest stats');
     };
-
-
 
     var readPageFiles = function(files){
         async.each(files, function(fileName, callback){
@@ -127,7 +142,10 @@ module.exports = function(logger){
     var buildKeyScriptPage = function(){
         async.waterfall([
             function(callback){
-                var client = redis.createClient(portalConfig.redis.port, portalConfig.redis.host);
+                 var client = redis.createClient(portalConfig.redis.port, portalConfig.redis.host);
+                 client.auth(portalConfig.redis.password);
+                 client.select(portalConfig.redis.db);
+
                 client.hgetall('coinVersionBytes', function(err, coinBytes){
                     if (err){
                         client.quit();
@@ -226,10 +244,67 @@ module.exports = function(logger){
 
     };
 
+    var minerpage = function(req, res, next){
+        var address = req.params.address || null;
+
+        if (address !== null){
+            portalStats.getBalanceByAddress(address, function(){
+                processTemplates();
+
+                res.end(indexesProcessed['miner_stats']);
+
+            });
+        }
+        else
+            next();
+    };
+
+    var payout = function(req, res, next){
+        var address = req.params.address || null;
+
+        if (address !== null){
+            portalStats.getPayout(address, function(data){
+                res.write(data.toString());
+                res.end();
+            });
+        }
+        else
+            next();
+    };
+
+
+    var shares = function(req, res, next){
+        portalStats.getCoins(function(){
+            processTemplates();
+
+            res.end(indexesProcessed['user_shares']);
+
+        });
+    };
+
+    var usershares = function(req, res, next){
+
+        var coin = req.params.coin || null;
+
+        if(coin !== null){
+            portalStats.getCoinTotals(coin, null, function(){
+                processTemplates();
+
+                res.end(indexesProcessed['user_shares']);
+
+            });
+        }
+        else
+            next();
+    };
 
 
     var app = express();
 
+     app.get('/stats/shares/:coin', usershares);
+     app.get('/stats/shares', shares);
+     app.get('/miner/:address', minerpage);
+     app.get('/payout/:address', payout);
 
     app.use(bodyParser.json());
 
@@ -247,6 +322,7 @@ module.exports = function(logger){
     });
 
     app.get('/:page', route);
+
     app.get('/', route);
 
     app.get('/api/:method', function(req, res, next){
@@ -269,7 +345,7 @@ module.exports = function(logger){
     });
 
     app.use(compress());
-    app.use('/static', express.static('website/static'));
+    app.use('/static', express.static('website/static', { maxAge: 86400000 * 7}));
 
     app.use(function(err, req, res, next){
         console.error(err.stack);

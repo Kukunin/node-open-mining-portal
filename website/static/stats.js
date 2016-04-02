@@ -88,7 +88,7 @@ function displayCharts(){
 
     nv.addGraph(function() {
         poolWorkerChart = nv.models.stackedAreaChart()
-            .margin({left: 40, right: 40})
+            .margin({left: 80, right: 80})
             .x(function(d){ return d[0] })
             .y(function(d){ return d[1] })
             .useInteractiveGuideline(true)

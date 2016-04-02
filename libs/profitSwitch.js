@@ -1,14 +1,15 @@
 var async  = require('async');
 var net    = require('net');
 var bignum = require('bignum');
-var algos  = require('stratum-pool/lib/algoProperties.js');
-var util   = require('stratum-pool/lib/util.js');
+var fs     = require('fs');
 
+var algos  = require('merged-pooler/lib/algoProperties.js');
+var util   = require('merged-pooler/lib/util.js');
 var Cryptsy  = require('./apiCryptsy.js');
 var Poloniex = require('./apiPoloniex.js');
 var Mintpal  = require('./apiMintpal.js');
 var Bittrex  = require('./apiBittrex.js');
-var Stratum  = require('stratum-pool');
+var Stratum  = require('merged-pooler');
 
 module.exports = function(logger){
 
@@ -24,44 +25,70 @@ module.exports = function(logger){
     //
     var profitStatus = {};
     var symbolToAlgorithmMap = {};
-    Object.keys(poolConfigs).forEach(function(coin){
+    
+    process.on('message', function(message) {
+        switch(message.type){
+            case 'reloadpool':
+                if (message.coin) {
+                    var messageCoin = message.coin.toLowerCase();
+                    var poolTarget = Object.keys(poolConfigs).filter(function(p){
+                        return p.toLowerCase() === messageCoin;
+                    })[0];
+                    poolConfigs  = JSON.parse(message.pools);
+                    populateProfitStatus(poolConfigs);
+                    checkProfitStatus();
+                }
+                break;
+	    }
+    });	        
+    
+    var populateProfitStatus = function() {
 
-        var poolConfig = poolConfigs[coin];
-        var algo       = poolConfig.coin.algorithm;
+        Object.keys(poolConfigs).forEach(function(coin){
 
-        if (!profitStatus.hasOwnProperty(algo)) {
-            profitStatus[algo] = {};
-        }
-        var coinStatus = {
-            name: poolConfig.coin.name,
-            symbol: poolConfig.coin.symbol,
-            difficulty: 0,
-            reward: 0,
-            exchangeInfo: {}
-        };
-        profitStatus[algo][poolConfig.coin.symbol] = coinStatus;
-        symbolToAlgorithmMap[poolConfig.coin.symbol] = algo;
-    });
+            var poolConfig = poolConfigs[coin];
+            var algo       = poolConfig.coin.algorithm;
 
-
-    // 
-    // ensure we have something to switch
-    //
-    Object.keys(profitStatus).forEach(function(algo){
-        if (Object.keys(profitStatus[algo]).length <= 1) {
-            delete profitStatus[algo];
-            Object.keys(symbolToAlgorithmMap).forEach(function(symbol){
-                if (symbolToAlgorithmMap[symbol] === algo)
-                    delete symbolToAlgorithmMap[symbol];
-            });
-        }
-    });
-    if (Object.keys(profitStatus).length == 0){
-        logger.debug(logSystem, 'Config', 'No alternative coins to switch to in current config, switching disabled.');
-        return;
+            if (!profitStatus.hasOwnProperty(algo)) {
+                profitStatus[algo] = {};
+            }
+            var coinStatus = {
+                name: poolConfig.coin.name,
+                symbol: poolConfig.coin.symbol,
+                difficulty: 0,
+                reward: 0,
+                exchangeInfo: {}
+            };
+            profitStatus[algo][poolConfig.coin.symbol] = coinStatus;
+            symbolToAlgorithmMap[poolConfig.coin.symbol] = algo;
+        });
     }
 
+    var checkProfitStatus = function() {
 
+        // 
+        // ensure we have something to switch
+        //
+        Object.keys(profitStatus).forEach(function(algo){
+            if (Object.keys(profitStatus[algo]).length <= 1) {
+                delete profitStatus[algo];
+                Object.keys(symbolToAlgorithmMap).forEach(function(symbol){
+                    if (symbolToAlgorithmMap[symbol] === algo)
+                        delete symbolToAlgorithmMap[symbol];
+                });
+            }
+        });
+        if (Object.keys(profitStatus).length == 0){
+            logger.debug(logSystem, 'Config', 'No alternative coins to switch to in current config, switching disabled.');
+            return true;
+        }
+        return false
+    }
+
+    populateProfitStatus();
+    if (checkProfitStatus())
+        return;
+    
     // 
     // setup APIs
     //
@@ -554,9 +581,20 @@ module.exports = function(logger){
             // some shitcoins dont provide target, only bits, so we need to deal with both
             var target = response.target ? bignum(response.target, 16) : util.bignumFromBitsHex(response.bits);
             coinStatus.difficulty = parseFloat((diff1 / target.toNumber()).toFixed(9));
-            logger.debug(logSystem, symbol, 'difficulty is ' + coinStatus.difficulty);
+            logger.warn(logSystem, symbol, 'difficulty is ' + coinStatus.difficulty);
 
-            coinStatus.reward = response.coinbasevalue / 100000000;
+	    if (coinStatus.name == 'dogecoindark'){coinStatus.reward = response.coinbasevalue / 1000000;}
+	    else if (coinStatus.name == 'cryptobullion'){coinStatus.reward = response.coinbasevalue / 1000000;}
+	    else if (coinStatus.name == 'tekcoin'){coinStatus.reward = response.coinbasevalue / 1000000;}
+	    else if (coinStatus.name == 'battlecoin'){coinStatus.reward = response.coinbasevalue / 1000000;}
+	    else if (coinStatus.name == 'opensourcecoin'){coinStatus.reward = response.coinbasevalue / 1000000;}
+	    else if (coinStatus.name == 'legendarycoin'){coinStatus.reward = response.coinbasevalue / 1000000;}
+	    else if (coinStatus.name == 'novacoin'){coinStatus.reward = response.coinbasevalue / 1000000;}
+	    else if (coinStatus.name == 'tagcoin'){coinStatus.reward = response.coinbasevalue / 1000000;}
+
+
+
+            else{coinStatus.reward = response.coinbasevalue / 100000000;}
             callback(null);
         });
     };
@@ -567,7 +605,10 @@ module.exports = function(logger){
         Object.keys(profitStatus).forEach(function(algo){
             Object.keys(profitStatus[algo]).forEach(function(symbol){
                 var coinStatus = profitStatus[symbolToAlgorithmMap[symbol]][symbol];
-                coinStatus.blocksPerMhPerHour = 86400 / ((coinStatus.difficulty * Math.pow(2,32)) / (1 * 1000 * 1000));
+                if (algo == "sha256"){
+	coinStatus.blocksPerMhPerHour = 86400 / ((coinStatus.difficulty * Math.pow(2,32)) / (1 * 1000 * 1000 * 1000));
+	} else {coinStatus.blocksPerMhPerHour = 86400 / ((coinStatus.difficulty * Math.pow(2,32)) / (1 * 1000 * 1000));
+}
                 coinStatus.coinsPerMhPerHour = coinStatus.reward * coinStatus.blocksPerMhPerHour;
             });
         });
@@ -596,7 +637,7 @@ module.exports = function(logger){
                             bestCoin = profitStatus[algo][symbol].name;
                         }
                         coinStatus.btcPerMhPerHour = btcPerMhPerHour;
-                        logger.debug(logSystem, 'CALC', 'BTC/' + symbol + ' on ' + exchange + ' with ' + coinStatus.btcPerMhPerHour.toFixed(8) + ' BTC/day per Mh/s');
+                        logger.warn(logSystem, 'CALC', 'BTC/' + symbol + ' on ' + exchange + ' with ' + coinStatus.btcPerMhPerHour.toFixed(8) + ' BTC/day per Mh/s');
                     }
                     if (exchangeData.hasOwnProperty('LTC') && exchangeData['LTC'].hasOwnProperty('weightedBid')){
                         var btcPerMhPerHour = (exchangeData['LTC'].weightedBid * coinStatus.coinsPerMhPerHour) * exchangeData['LTC'].ltcToBtc;
@@ -606,13 +647,15 @@ module.exports = function(logger){
                             bestCoin = profitStatus[algo][symbol].name;
                         }
                         coinStatus.btcPerMhPerHour = btcPerMhPerHour;
-                        logger.debug(logSystem, 'CALC', 'LTC/' + symbol + ' on ' + exchange + ' with ' + coinStatus.btcPerMhPerHour.toFixed(8) + ' BTC/day per Mh/s');
+                        logger.warn(logSystem, 'CALC', 'LTC/' + symbol + ' on ' + exchange + ' with ' + coinStatus.btcPerMhPerHour.toFixed(8) + ' BTC/day per Mh/s');
                     }
                 });
             });
-            logger.debug(logSystem, 'RESULT', 'Best coin for ' + algo + ' is ' + bestCoin + ' on ' + bestExchange + ' with ' + bestBtcPerMhPerHour.toFixed(8) + ' BTC/day per Mh/s');
-
-
+            logger.warn(logSystem, 'RESULT', 'Best coin for ' + algo + ' is ' + bestCoin + ' on ' + bestExchange + ' with ' + bestBtcPerMhPerHour.toFixed(8) + ' BTC/day per Mh/s');
+			// Uncomment for advanced reporting, not included in base repo. You must do some magic on your side ;)
+			//fs.writeFile('~/unomp/website/static/' + algo + '.txt', bestBtcPerMhPerHour.toFixed(8),function (err) {
+  			//	if (err) throw err;
+		//});
             var client = net.connect(portalConfig.cliPort, function () {
                 client.write(JSON.stringify({
                     command: 'coinswitch',
@@ -621,7 +664,7 @@ module.exports = function(logger){
                 }) + '\n');
             }).on('error', function(error){
                 if (error.code === 'ECONNREFUSED')
-                    logger.error(logSystem, 'CLI', 'Could not connect to NOMP instance on port ' + portalConfig.cliPort);
+                    logger.error(logSystem, 'CLI', 'Could not connect to UNOMP instance on port ' + portalConfig.cliPort);
                 else
                     logger.error(logSystem, 'CLI', 'Socket error ' + JSON.stringify(error));
             });
@@ -631,7 +674,7 @@ module.exports = function(logger){
 
 
     var checkProfitability = function(){
-        logger.debug(logSystem, 'Check', 'Collecting profitability data.');
+        logger.warn(logSystem, 'Check', 'Collecting profitability data.');
 
         profitabilityTasks = [];
         if (portalConfig.profitSwitch.usePoloniex)
