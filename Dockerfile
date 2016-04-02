@@ -1,4 +1,4 @@
-FROM node:0.10
+FROM node:5.10
 MAINTAINER Sergiy Kukunin <sergiy.kukunin@gmail.com>
 
 RUN groupadd -r nomp && useradd -r -g nomp nomp && \
