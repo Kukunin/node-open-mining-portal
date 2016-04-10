@@ -5,6 +5,8 @@
 <li>/stats - raw json statistic</li>
 <li>/pool_stats - historical time per pool json </li>
 <li>/live_stats - live stats </li>
-
+{{ if(it.portalConfig.website.amiAlone.enabled) { }}
+<li>/ami_online?instance_id=xxx - instance lock for specific worker</li>
+{{ } }}
 </ul>
 </div>

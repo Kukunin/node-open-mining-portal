@@ -31,13 +31,14 @@
         "url": "https://github.com/zone117x/node-open-mining-portal.git"
     },
     "dependencies": {
-        "stratum-pool": "git://github.com/Kukunin/node-stratum-pool.git",
+        "stratum-pool": "git://github.com/Kukunin/node-stratum-pool.git#old-nan",
         "dateformat": "*",
         "node-json-minify": "*",
         "redis": "*",
         "mysql": "*",
         "async": "*",
         "express": "*",
+        "cookie-parser": "*",
         "body-parser": "*",
         "compression": "*",
         "dot": "*",

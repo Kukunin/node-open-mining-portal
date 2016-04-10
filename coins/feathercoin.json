@@ -1,5 +1,6 @@
 {
     "name": "Feathercoin",
     "symbol": "FTC",
-    "algorithm": "neoscrypt"
+    "algorithm": "neoscrypt",
+    "peerMagic": "fbc0b6db"
 }

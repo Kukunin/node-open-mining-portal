@@ -15,6 +15,5 @@ RUN chown -R nomp.nomp /app && \
 
 USER nomp
 VOLUME /data
-EXPOSE 3000
 
 CMD ["/usr/local/bin/node", "init.js"]
