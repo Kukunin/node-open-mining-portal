@@ -1,4 +1,4 @@
-FROM node:5.10
+FROM node:0.10
 MAINTAINER Sergiy Kukunin <sergiy.kukunin@gmail.com>
 
 RUN groupadd -r nomp && useradd -r -g nomp nomp && \
@@ -15,6 +15,5 @@ RUN chown -R nomp.nomp /app && \
 
 USER nomp
 VOLUME /data
-EXPOSE 3000
 
 CMD ["/usr/local/bin/node", "init.js"]
