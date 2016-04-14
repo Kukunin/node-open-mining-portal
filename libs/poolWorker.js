@@ -108,6 +108,8 @@ module.exports = function(logger){
             diff: function(){}
         };
 
+        var workerUsernames = {};
+
         //Functions required for MPOS compatibility
         if (poolOptions.mposMode && poolOptions.mposMode.enabled){
             var mposCompat = new MposCompatibility(logger, poolOptions);
@@ -144,18 +146,23 @@ module.exports = function(logger){
                         }
                     }
                     else {
-                        pool.daemon.cmd('validateaddress', [workerName], function (results) {
-                            var isValid = results.filter(function (r) {
-                                if (!r.response) {
-                                    var message = "Invalid daemon response: " + JSON.stringify(r)
-                                    logger.error(logSystem, logComponent, logSubCat, message);
-                                    return false;
-                                } else {
-                                    return r.response.isvalid;
-                                }
-                            }).length > 0;
-                            authCallback(isValid);
-                        });
+                        if (workerName in workerUsernames) {
+                            authCallback(workerUsernames[workerName]);
+                        } else {
+                            pool.daemon.cmd('validateaddress', [workerName], function (results) {
+                                var isValid = results.filter(function (r) {
+                                    if (!r.response) {
+                                        var message = "Invalid daemon response: " + JSON.stringify(r)
+                                        logger.error(logSystem, logComponent, logSubCat, message);
+                                        return false;
+                                    } else {
+                                        return r.response.isvalid;
+                                    }
+                                }).length > 0;
+                                workerUsernames[workerName] = isValid;
+                                authCallback(isValid);
+                            });
+                        }
                     }
 
                 }
